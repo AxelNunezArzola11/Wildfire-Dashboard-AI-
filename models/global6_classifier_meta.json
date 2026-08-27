@@ -1,0 +1,67 @@
+{
+  "classes": [
+    "Forest_Vegetation",
+    "Cropland",
+    "Water",
+    "Built_up",
+    "Bare_Sparse",
+    "Wetland"
+  ],
+  "num_classes": 6,
+  "architecture": "mobilenet_v2",
+  "input_size": [
+    3,
+    64,
+    64
+  ],
+  "normalize_mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "normalize_std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "weighting_scheme": "source_aware_sqrt_inv_freq_wrs",
+  "angola_boost_target": 0.25,
+  "angola_boost_classes": [
+    "Built_up",
+    "Forest_Vegetation"
+  ],
+  "class_weights": {
+    "Forest_Vegetation": 0.1365,
+    "Cropland": 0.1637,
+    "Water": 0.1637,
+    "Built_up": 0.1366,
+    "Bare_Sparse": 1.0,
+    "Wetland": 1.0
+  },
+  "best_epoch": 15,
+  "total_training_s": 7180.4,
+  "device": "cpu",
+  "train_size_eurosat": 21600,
+  "train_size_angola": 474,
+  "val_size_eurosat": 5400,
+  "val_size_angola": 118,
+  "es_val_overall_acc": 0.9557,
+  "ao_val_overall_acc": 0.7458,
+  "es_val_per_class": {
+    "Forest_Vegetation": 0.9688,
+    "Cropland": 0.9464,
+    "Water": 0.9527,
+    "Built_up": 0.9513,
+    "Bare_Sparse": null,
+    "Wetland": null
+  },
+  "ao_val_per_class": {
+    "Forest_Vegetation": 0.7,
+    "Cropland": 0.45,
+    "Water": 0.4,
+    "Built_up": 0.625,
+    "Bare_Sparse": 1.0,
+    "Wetland": 0.9667
+  },
+  "epoch_log": "reports/train_global6_log_20260820_164430.csv"
+}

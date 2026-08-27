@@ -1,0 +1,2 @@
+epoch,train_loss,train_acc,es_val_acc,ao_val_acc,es_Forest_Vegetation,es_Cropland,es_Water,es_Built_up,ao_Forest_Vegetation,ao_Cropland,ao_Water,ao_Built_up,ao_Bare_Sparse,ao_Wetland,elapsed_s,best_es_val_acc
+1,0.425651,0.818927,0.901667,0.567797,0.9137,0.94,0.8091,0.9269,0.3,0.0,0.0,0.625,1.0,0.9667,523.3,0.901667

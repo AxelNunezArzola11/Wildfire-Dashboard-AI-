@@ -1,0 +1,29 @@
+# ── Credentials / Secrets ───────────────────────────────────────────────────
+.env
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environment ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Large binary / generated data files ──────────────────────────────────────
+# SQLite cache database (101 MB, regenerated at runtime)
+wildfire_cache.db
+
+# Training datasets (227 MB EuroSAT + 31 MB Angola patches — not source code)
+data/eurosat/
+data/patches_angola/
+
+# ── Test / tooling caches ────────────────────────────────────────────────────
+.pytest_cache/
+
+# ── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

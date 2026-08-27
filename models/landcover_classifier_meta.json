@@ -1,0 +1,39 @@
+{
+  "classes": [
+    "AnnualCrop",
+    "Forest",
+    "HerbaceousVegetation",
+    "Highway",
+    "Industrial",
+    "Pasture",
+    "PermanentCrop",
+    "Residential",
+    "River",
+    "SeaLake"
+  ],
+  "num_classes": 10,
+  "architecture": "mobilenet_v2",
+  "input_size": [
+    3,
+    64,
+    64
+  ],
+  "normalize_mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "normalize_std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "test_accuracy": 0.9341,
+  "best_val_accuracy": 0.9284,
+  "best_epoch": 7,
+  "total_training_seconds": 4382.1,
+  "device": "cpu",
+  "train_size": 18899,
+  "val_size": 4050,
+  "test_size": 4051
+}

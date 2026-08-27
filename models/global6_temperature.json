@@ -1,0 +1,8 @@
+{
+  "T": 1.0332921743392944,
+  "fit_on": "EuroSAT val (5400) + Angola val (118) \u2014 combined NLL minimisation (LBFGS)",
+  "ece_eurosat_val_before": 0.0052,
+  "ece_eurosat_val_after": 0.0065,
+  "ece_angola_val_before": 0.1689,
+  "ece_angola_val_after": 0.1669
+}

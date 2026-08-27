@@ -1,0 +1,6 @@
+{
+  "T": 1.11005699634552,
+  "fit_on": "EuroSAT val (5400) \u2014 NLL minimisation (LBFGS)",
+  "ece_eurosat_val_before": 0.0103,
+  "ece_eurosat_val_after": 0.012
+}
