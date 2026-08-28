@@ -369,87 +369,87 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 ```mermaid
 flowchart TD
     subgraph Sources["External Data Sources"]
-        FIRMS["NASA FIRMS\nVIIRS SNPP NRT"]
-        OM["Open-Meteo\nHourly Weather API"]
-        EA["NASA Earthdata\nHLS Sentinel-2 HLSL30"]
-        WX["IBM watsonx.ai\nGranite + Llama 3.3 70B"]
+        FIRMS["NASA FIRMS<br/>VIIRS SNPP NRT"]
+        OM["Open-Meteo<br/>Hourly Weather API"]
+        EA["NASA Earthdata<br/>HLS Sentinel-2 HLSL30"]
+        WX["IBM watsonx.ai<br/>Granite + Llama 3.3 70B"]
     end
 
     subgraph Config["config.py"]
-        BBOX["COUNTRY_BBOX\n20 countries W,S,E,N"]
-        CREDS["FIRMS_MAP_KEY\nWATSONX_API_KEY\nEARTHDATA creds"]
+        BBOX["COUNTRY_BBOX<br/>20 countries W,S,E,N"]
+        CREDS["FIRMS_MAP_KEY<br/>WATSONX_API_KEY<br/>EARTHDATA creds"]
     end
 
     BBOX -->|bbox string| ING
     CREDS -->|credentials| ING
     CREDS -->|credentials| WX
 
-    FIRMS -->|"Area CSV\n(≤5-day chunks)"| ING
+    FIRMS -->|"Area CSV (5-day chunks)"| ING
 
-    subgraph Cache["wildfire_cache.db  (SQLite)"]
-        FC["fire_cache\n(TTL: 30 min)"]
-        WC["weather_cache\n(TTL: 60 min)"]
-        AR["agent_runs\n(permanent)"]
+    subgraph Cache["wildfire_cache.db (SQLite)"]
+        FC["fire_cache<br/>TTL: 30 min"]
+        WC["weather_cache<br/>TTL: 60 min"]
+        AR["agent_runs<br/>permanent"]
     end
 
-    ING["ingestor.py\nget_fire_data()"] -->|"DataFrame\n(lat, lon, frp, acq_date…)"| FC
+    ING["ingestor.py<br/>get_fire_data()"] -->|"DataFrame (lat, lon, frp, acq_date)"| FC
     FC -->|cached rows| RISK
     FC -->|cached rows| FENG
 
-    OM -->|"JSON\n(temp, humidity, wind…)"| WC
+    OM -->|"JSON (temp, humidity, wind)"| WC
     WC -->|cached weather| FENG
 
     subgraph Core["Core Processing"]
-        RISK["risk_engine.py\ncompute_risk()\n→ RiskContext"]
-        FENG["forecast_engine.py\nrun_forecast()\n→ ForecastResult\n(XGBoost or Deterministic)"]
-        SHAP["SHAP TreeExplainer\ntop-10 cells"]
+        RISK["risk_engine.py<br/>compute_risk()<br/>RiskContext"]
+        FENG["forecast_engine.py<br/>run_forecast()<br/>ForecastResult<br/>XGBoost or Deterministic"]
+        SHAP["SHAP TreeExplainer<br/>top-10 cells"]
     end
 
-    FENG -->|"fitted XGBClassifier\n+ X_all"| SHAP
-    SHAP -->|"shap_contribs\nper cell"| FENG
+    FENG -->|"fitted XGBClassifier + X_all"| SHAP
+    SHAP -->|"shap_contribs per cell"| FENG
 
-    subgraph LLM["llm_gateway.py  (WatsonxGateway)"]
-        GEN["Generator\nGranite\n_generate_summary()\n_generate_forecast_interp()"]
-        PRE["numeric_prefilter()\n±5% tolerance check"]
-        CRIT["Critic\nLlama 3.3 70B\naudit_insight()"]
-        CORR["Correction loop\n(max 1 retry)\nor ⚠ UNVERIFIED"]
+    subgraph LLM["llm_gateway.py (WatsonxGateway)"]
+        GEN["Generator<br/>Granite<br/>_generate_summary()<br/>_generate_forecast_interp()"]
+        PRE["numeric_prefilter()<br/>+/-5% tolerance check"]
+        CRIT["Critic<br/>Llama 3.3 70B<br/>audit_insight()"]
+        CORR["Correction loop<br/>max 1 retry<br/>or UNVERIFIED"]
     end
 
     RISK -->|RiskContext| GEN
     FENG -->|ForecastResult| GEN
     GEN -->|summary text| PRE
-    PRE -->|"numbers OK\n(skip)"| DONE["verified text"]
-    PRE -->|"suspicious numbers\n(escalate)"| CRIT
+    PRE -->|"numbers OK (skip)"| DONE["verified text"]
+    PRE -->|"suspicious numbers (escalate)"| CRIT
     CRIT -->|PASS| DONE
     CRIT -->|FAIL| CORR
     CORR -->|regenerated text| CRIT
-    CORR -->|"both fail"| UNV["text + ⚠ UNVERIFIED"]
+    CORR -->|"both fail"| UNV["text - UNVERIFIED"]
 
-    subgraph Agent["agent_runner.py  (autonomous)"]
-        RO["run_once()\nSteps 1-4"]
-        ART["artifacts.py\nsave_run_artifacts()"]
+    subgraph Agent["agent_runner.py (autonomous)"]
+        RO["run_once()<br/>Steps 1-4"]
+        ART["artifacts.py<br/>save_run_artifacts()"]
     end
 
     FC -->|fire_df| RO
     RISK -->|risk_metrics| RO
     FENG -->|forecast_result| RO
-    DONE -->|summary_text\nforecast_text| RO
-    RO -->|guardrail_verdict\nstatus\nlatency| AR
-    RO -->|fire_df\nmodel.json\nreport.md| ART
+    DONE -->|"summary_text / forecast_text"| RO
+    RO -->|"guardrail_verdict / status / latency"| AR
+    RO -->|"fire_df / model.json / report.md"| ART
 
-    subgraph Sentinel["Land Cover (Land Cover tab)"]
-        EA -->|"HLS B2/B3/B4/B8A\n30m reflectance"| SF["sentinel_fetch.py"]
-        SF -->|"float32 tile\n[0,~0.25]"| LCC["landcover_classifier.py\nclassify_tile()\nPhase A: EuroSAT-10 (94% acc)\nPhase B: Global-6 MobileNetV2"]
-        SF -->|"B8A, B4 bands"| NDVI["NDVI\n(B8A−B4)/(B8A+B4)"]
+    subgraph Sentinel["Land Cover tab"]
+        EA -->|"HLS B2/B3/B4/B8A 30m reflectance"| SF["sentinel_fetch.py"]
+        SF -->|"float32 tile [0, 0.25]"| LCC["landcover_classifier.py<br/>classify_tile()<br/>Phase A: EuroSAT-10 94pct acc<br/>Phase B: Global-6 MobileNetV2"]
+        SF -->|"B8A, B4 bands"| NDVI["NDVI (B8A-B4)/(B8A+B4)"]
     end
 
-    subgraph UI["app.py  (Streamlit — 6 tabs)"]
-        T1["🗺️ Map"]
-        T2["📊 Risk Summary"]
-        T3["🔮 Forecast"]
-        T4["💬 Chat"]
-        T5["🤖 Agent Status"]
-        T6["🌿 Land Cover"]
+    subgraph UI["app.py (Streamlit - 6 tabs)"]
+        T1["Map"]
+        T2["Risk Summary"]
+        T3["Forecast"]
+        T4["Chat"]
+        T5["Agent Status"]
+        T6["Land Cover"]
     end
 
     RISK --> T2
