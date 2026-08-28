@@ -1106,7 +1106,7 @@ with tab_agent:
                     "running":  "background-color:#cce5ff;color:#004085",
                 }.get(val, "")
 
-            _styled = _df_runs.style.applymap(_status_style, subset=["Status"])
+            _styled = _df_runs.style.map(_status_style, subset=["Status"])
             st.dataframe(_styled, use_container_width=True, hide_index=True)
 
             # ── Downloads column — one expander per run ──────────────────

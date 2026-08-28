@@ -2,7 +2,7 @@
 streamlit>=1.32
 folium>=0.16
 streamlit-folium>=0.20
-pandas>=2.0
+pandas>=2.1
 requests>=2.31
 ibm-watsonx-ai>=1.0
 python-dotenv>=1.0
