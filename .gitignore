@@ -27,3 +27,7 @@ data/patches_angola/
 # ── OS files ─────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# Streamlit secrets — the real file must never be committed; the .example
+# template (with placeholder values only) is intentionally tracked.
+.streamlit/secrets.toml
