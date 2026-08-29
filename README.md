@@ -142,16 +142,55 @@ at a glance.
 | **3. Challenge Fit** | Built for the Space Exploration track: fire detection, vegetation context, and NDVI all come directly from satellite Earth-observation data (NASA FIRMS, Sentinel-2/HLS), applied to a real-world disaster-response problem — wildfire risk — for an actual user group (rangers, civil protection, emergency managers). |
 | **4. Implementation & Feasibility** | A working, deployable Streamlit app with an interactive map, forecast, chat, and autonomous background agent mode. Every run of the autonomous agent produces a reproducible, downloadable artifact bundle (dataset + trained model + training script + report) — not just a UI demo, but auditable outputs a real operator could inspect or reuse. |
 
+## How this project compares to existing tools
+
+The table below compares Wildfire Dashboard AI against four existing wildfire and Earth-observation monitoring tools. Where this project is weaker or a competing tool is equal or better, that is noted honestly. Claims about competing tools are sourced from their own public documentation; features not publicly documented are marked accordingly.
+
+| Capability | **Wildfire Dashboard AI** | [NASA FIRMS Viewer](https://firms.modaps.eosdis.nasa.gov/map/) | [EFFIS (European Forest Fire Information System)](https://effis.jrc.ec.europa.eu/) | [Global Forest Watch Fires](https://fires.globalforestwatch.org/) | [WFIGS (Wildland Fire Interagency Geospatial Service)](https://www.nifc.gov/fire-information/fire-mapping/wfigs) |
+|---|---|---|---|---|---|
+| **Live fire detections (VIIRS/MODIS)** | ✅ Near-real-time via NASA FIRMS Area API | ✅ Same underlying VIIRS/MODIS data, available via both the web viewer and the FIRMS Area API (the same API this project uses for ingestion) ([source](https://firms.modaps.eosdis.nasa.gov/api/area/)) | ✅ Uses MODIS and VIIRS data ([source](https://effis.jrc.ec.europa.eu/about-effis/technical-background/fire-detection)) | ✅ Uses NASA FIRMS data ([source](https://fires.globalforestwatch.org/map/)) | ✅ U.S. active fire perimeters and ICS-209 data ([source](https://data-nifc.opendata.arcgis.com/)) |
+| **Historical archive depth** | ⚠️ Up to 7 days via FIRMS Area API (longer windows require chunking within API limits) | ✅ **Better** — up to 12 months via FIRMS archive API ([source](https://firms.modaps.eosdis.nasa.gov/api/area/)) | ✅ Multi-year archives available via EFFIS portal ([source](https://effis.jrc.ec.europa.eu/applications/fire-weather)) | ✅ Multi-year archive ([source](https://fires.globalforestwatch.org/)) | Not publicly documented for full archive programmatic access |
+| **AI-generated plain-language risk summary** | ✅ IBM Granite generator + critic guardrail loop producing verified text | ❌ No AI narrative | ❌ No AI narrative | ❌ No AI narrative | ❌ No AI narrative |
+| **Land-cover computer vision (Sentinel-2)** | ✅ MobileNetV2 fine-tuned on EuroSAT + Angola Sentinel-2 patches; 6 classes; 30m resolution | ❌ No CV classification | ❌ No CV classification (uses ESA/JRC land-cover static maps — not publicly documented as ML-based) | ❌ No CV classification | ❌ No CV classification |
+| **NDVI computation from satellite bands** | ✅ Computed on-demand from Sentinel-2/HLS B8A and B4 bands (real satellite reflectances) | ❌ Not available | ❌ Not available in public viewer | ❌ NDVI alerts noted in documentation but not computed on-demand from raw bands ([source](https://fires.globalforestwatch.org/)) | ❌ Not available |
+| **SHAP explainability on forecast** | ✅ SHAP TreeExplainer on XGBoost model; per-cell ranked feature contributions | ❌ No ML forecast | ❌ Fire weather indices shown but no SHAP-style attribution | ❌ No ML forecast with explainability | ❌ No ML forecast |
+| **24-hour probabilistic forecast** | ✅ 0.25° grid, XGBoost or deterministic fallback | ❌ No forecast | ✅ Fire Danger Forecast using FWI system ([source](https://effis.jrc.ec.europa.eu/applications/fire-weather)) | ❌ No probabilistic grid forecast | Not publicly documented |
+| **Autonomous agent mode (unattended pipeline)** | ✅ `agent_runner.py` — full pipeline on schedule, artifact bundles, SQLite run log | ❌ | ❌ | ❌ | ❌ |
+| **Generator–critic guardrail audit trail** | ✅ Every AI claim audited before display; UNVERIFIED badge on failures; `?debug=guardrails` demo mode | ❌ | ❌ | ❌ | ❌ |
+| **Geographic coverage** | 20 countries (hardcoded bounding boxes) | 🌐 **Better** — global coverage, all countries | EU focus + neighbouring regions ([source](https://effis.jrc.ec.europa.eu/)) | 🌐 **Better** — global coverage ([source](https://fires.globalforestwatch.org/)) | 🇺🇸 U.S. only ([source](https://www.nifc.gov/fire-information/fire-mapping/wfigs)) |
+| **Programmatic / embeddable API** | ❌ Streamlit app only (no public REST API) | ✅ FIRMS Area and Transaction APIs ([source](https://firms.modaps.eosdis.nasa.gov/api/area/)) | ✅ WMS/WFS layers available ([source](https://effis.jrc.ec.europa.eu/)) | ✅ ArcGIS REST services ([source](https://fires.globalforestwatch.org/)) | ✅ Open ArcGIS REST services ([source](https://data-nifc.opendata.arcgis.com/)) |
+| **Open source / inspectable model** | ✅ Full source available; model training script exported per run | ✅ Underlying FIRMS data is open | ❌ Methodology published in papers but service is not open source | ❌ Not open source | ❌ Not open source |
+
+> **Note:** EFFIS is focused on Europe and neighbouring regions; WFIGS is U.S.-only. NASA FIRMS itself is the upstream data source for both this project and several competitors — the comparison is about what is built on top of the detection signal, not the signal itself. Every claim about a competing tool above is drawn from its own public-facing documentation or API reference; capabilities not listed there are marked "not publicly documented" rather than assumed absent.
+
+---
+
+## Who is this for?
+
+> **Note:** The segment document referenced in the project notes (`wildfireagent_problem_market.md`) was not found in this repository. The segments below are derived from what is verifiable in the README and codebase, and from the stated design goals of the project. If you have the original market-segment document, paste it and these descriptions can be aligned with it.
+
+Wildfire Dashboard AI is designed for operational users who receive raw satellite fire detections but lack the resources — data science staff, time, or reliable connectivity — to convert them into actionable decisions in the field.
+
+| Segment | Who they are | What this system gives them |
+|---|---|---|
+| **Forest rangers and field teams** | Staff responsible for physical verification and first response — João's role in the Angola scenario. Limited connectivity; high decision cost per deployment. | A triage layer: verified vegetation context (NDVI, land-cover class) and a plain-language priority assessment for each fire detection before committing field resources. |
+| **Civil protection and emergency management agencies** | National or regional agencies coordinating multi-resource wildfire response. | A consolidated map + 24-hour risk forecast + audit-ready AI summary that can be shared with command staff without requiring data science interpretation. |
+| **Utility and infrastructure operators** | Electricity transmission and distribution operators in fire-prone regions (western U.S., Iberian Peninsula, South Africa). | Early-warning grid risk data near critical assets; reproducible run bundles for post-incident analysis and regulatory disclosure. |
+| **Insurers and reinsurers** | Property and agriculture insurers writing coverage in high fire-risk countries. | Timestamped, auditable AI-risk assessments and forecast bundles per event that can inform underwriting reviews and claims triage. |
+| **NGOs and conservation organisations** | Environmental NGOs monitoring forest loss in tropical countries (DRC, Indonesia, Brazil, Angola). | Land-cover classification against Sentinel-2 satellite imagery, flagging high-NDVI cells under fire threat — independent of national agency reporting. |
+
+---
+
 ## Architecture
 
 | Module | Role |
 |---|---|
-| `app.py` | Streamlit entry point — wires all modules into four tabs (Map, Risk Summary, Forecast, Chat) |
+| `app.py` | Streamlit entry point — wires all modules into six tabs (Map, Risk Summary, Forecast, Chat, Agent Status, Land Cover) |
 | `config.py` | Central configuration — credentials, bounding boxes, cache TTLs, and all tunable constants |
 | `ingestor.py` | NASA FIRMS Area API client — fetches near-real-time fire CSV data; SQLite TTL cache |
 | `weather_client.py` | Open-Meteo API client — fetches per-point hourly weather features; SQLite TTL cache |
 | `risk_engine.py` | Pure-Python risk metric engine — computes `RiskContext` from fire DataFrame; no network |
-| `forecast_engine.py` | Grid-cell fire probability model — builds 0.25° grid, trains `GradientBoostingClassifier` on pseudo-labels or falls back to deterministic scoring |
+| `forecast_engine.py` | Grid-cell fire probability model — builds 0.25° grid, trains `XGBClassifier` (XGBoost) on pseudo-labels or falls back to deterministic scoring |
 | `llm_gateway.py` | Abstract `LLMGateway` base class + `WatsonxGateway` concrete implementation via IBM Granite |
 
 ---
@@ -235,6 +274,8 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 |---|---|---|
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) | Near real-time active fire and hotspot detections from VIIRS (375 m) and MODIS (1 km) satellite instruments | NASA open data / public domain |
 | [Open-Meteo](https://open-meteo.com/) | Free, no-key weather forecast API — temperature, humidity, wind speed, precipitation, soil moisture (hourly, 2-day horizon) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| [NASA Earthdata — Sentinel-2/HLS (HLSL30)](https://lpdaac.usgs.gov/products/hlsl30v002/) | Harmonised Landsat Sentinel-2 (HLSL30) product at 30 m resolution. Bands B02 (Blue), B03 (Green), B04 (Red), and B8A (NIR) fetched on-demand via the `earthaccess` Python library. NDVI is computed as (B8A − B4) / (B8A + B4) directly from these reflectances. Used for land-cover classification and vegetation context. ([`sentinel_fetch.py`](sentinel_fetch.py:1) — `HLSL30` product, band mapping) | NASA / USGS open data — requires free NASA Earthdata account; [LP DAAC data policy](https://lpdaac.usgs.gov/data/data-citation-and-policies/) |
+| [IBM watsonx.ai](https://www.ibm.com/products/watsonx-ai) | Two models accessed via the `ibm-watsonx-ai` SDK through watsonx.ai: **Generator** — `ibm/granite-4-h-small` (IBM-authored Granite model; produces plain-language risk summaries); **Critic** — `meta-llama/llama-3-3-70b-instruct` (Meta-authored Llama 3.3 70B, hosted on watsonx.ai; audits generator output for fabricated numbers and contradictions). Model IDs are confirmed in [`config.py`](config.py:42) (`GRANITE_MODEL_ID`, `GUARDIAN_MODEL_ID`). | Commercial — requires IBM watsonx.ai account |
 
 ---
 
@@ -243,7 +284,7 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 - **Probabilistic estimates only.** The 24-hour fire risk forecast outputs probabilities
   (0–100 %), not definitive predictions. Always display and interpret the results together
   with the "PROBABILISTIC ESTIMATE — NOT A CERTAINTY" disclaimer shown in the Forecast tab.
-- **Pseudo-label training.** The `GradientBoostingClassifier` is trained on the same
+- **Pseudo-label training.** The `XGBClassifier` (XGBoost) is trained on the same
   batch it scores, using a heuristic labelling strategy (recent fire activity = label 1;
   no activity in 7 days = label 0). This is appropriate for a prototype but is not a
   substitute for a model trained on long-term ground-truth matched labels.
@@ -262,18 +303,57 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 
 - **Real matched labels:** lag FIRMS data by 24 h to generate ground-truth fire/no-fire
   labels and retrain the classifier with genuine supervision.
-- **NDVI / vegetation index:** integrate MODIS or Sentinel-2 vegetation greenness as a
-  feature to capture fuel dryness (requires data registration — deferred to Phase 2).
-- **48-hour and 7-day forecasting:** extend `ForecastResult` to support multi-horizon
-  outputs; the architecture already supports this via `forecast_horizon_hours`.
-- **Historical trend analysis:** add a fifth tab showing fire activity trends over 30–90
-  days using FIRMS Archive data.
+- **NDVI / vegetation index:** ✅ *Implemented* — NDVI is computed on-demand from
+  Sentinel-2/HLS B8A and B4 bands and displayed in the Land Cover tab alongside the
+  MobileNetV2 land-cover classifier. See the [Land Cover & Vegetation](#capability-honesty)
+  capability section for details.
+- **48-hour forecasting horizon:** the 7-day horizon is already implemented
+  (`forecast_engine.py` supports `horizon_days=1` or `horizon_days=7`; both are
+  selectable in the UI). A standalone 48-hour horizon (distinct from the existing
+  24-hour and 7-day options) remains a future item.
+- **Historical trend analysis:** add a dedicated tab showing fire activity trends over
+  30–90 days using FIRMS Archive data.
 - **Global country coverage:** replace the hardcoded `COUNTRY_BBOX` dict with a GeoJSON
   world-bbox lookup (`geo_lookup.py`) — zero changes required in `app.py` or `ingestor.py`.
 - **Push alerts / notifications:** email or webhook alerts when risk level crosses a
   configurable threshold.
 - **Multi-user cloud deployment:** containerise with Docker and deploy to IBM Code Engine
   or any cloud platform; add session isolation.
+
+---
+
+## IBM tools used
+
+All IBM technology references below are confirmed against the actual source files — nothing is listed unless it appears in an import, a configuration value, or a direct SDK call in the codebase.
+
+| Technology | What it is | How it is used in this project | Where confirmed |
+|---|---|---|---|
+| **IBM watsonx.ai platform** | IBM's hosted AI/ML platform providing foundation model inference via API | All LLM calls (generation and critic) are routed through the watsonx.ai inference endpoint (`https://us-south.ml.cloud.ibm.com` default). Credentials: `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`. | [`config.py`](config.py:35) — `WATSONX_URL`; [`llm_gateway.py`](llm_gateway.py:448) — `APIClient`, `Credentials`, `ModelInference` imports |
+| **`ibm-watsonx-ai` Python SDK (≥1.0)** | IBM's official Python client for watsonx.ai | Instantiates `APIClient` with credentials, calls `ModelInference.generate_text()` for both generator and critic model calls, handles HTTP-level retries and responses. | [`requirements.txt`](requirements.txt:7) — `ibm-watsonx-ai>=1.0`; [`llm_gateway.py`](llm_gateway.py:447-449) — lazy import block |
+| **IBM Granite (`ibm/granite-4-h-small`)** | IBM-authored instruction-following model in the Granite family, hosted on watsonx.ai | **Generator role** in the guardrail pipeline — produces plain-language wildfire risk summaries and forecast interpretations from structured source data. Default model; overridable via `WATSONX_MODEL_ID` env var. | [`config.py`](config.py:42) — `GRANITE_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "ibm/granite-4-h-small")`; [`llm_gateway.py`](llm_gateway.py:457) — `model_id=config.GRANITE_MODEL_ID` |
+
+> **Non-IBM model hosted on watsonx.ai (for clarity):** `meta-llama/llama-3-3-70b-instruct` is a Meta-authored model, not an IBM product. It is accessed via the same watsonx.ai infrastructure and SDK but is listed here only for accuracy. It serves as the **critic** in the generator–critic guardrail loop, auditing Granite's outputs for fabricated numbers and contradictions. Model ID confirmed at [`config.py`](config.py:49-51) — `GUARDIAN_MODEL_ID = os.getenv("WATSONX_GUARDIAN_MODEL_ID", "meta-llama/llama-3-3-70b-instruct")`.
+
+---
+
+## How IBM Bob was used in this build
+
+IBM Bob (the agentic coding assistant) was used throughout the development of this project. The description below is specific and factual; it does not claim autonomous authorship of the project.
+
+**What Bob did autonomously:**
+- **Iterative bug diagnosis with root-cause documentation.** Bob investigated bugs by grepping the codebase, reading specific file ranges, and reading terminal output before proposing a fix — not speculating. Every fix was accepted only after a real terminal run confirmed the expected result. Examples documented in `JUDGE.md`: the Sentinel-2 normalisation path mismatch (HLS float32 [0, 0.25] causing 100% SeaLake classification), the 7-day features understatement bug when the UI was set to "48h", and the SHAP feature-column exclusion rationale.
+- **Targeted, minimal-change edits.** Bob used search-and-replace and diff-based patching rather than rewriting whole files, keeping diffs reviewable and auditable.
+- **Training and validation tasks.** Bob wrote and executed training scripts for both EuroSAT-10 (Phase A) and Global-6 (Phase B) computer-vision models, ran the validation loops, and reported the exact accuracy numbers that appear in `JUDGE.md` and this README.
+- **Codebase exploration before claims.** For every README or documentation claim about a specific line of code, Bob first verified the claim with a file read or grep before writing it — no line numbers were invented.
+
+**What required explicit human confirmation:**
+- All `git push` and deployment actions required explicit user approval before execution — Bob proposed the commands but did not run them autonomously.
+- Secret and credential management (setting `.env` values, creating API keys) was always performed by the user directly.
+- Decisions about model architecture choices, dataset composition, and which accuracy trade-offs were acceptable were made by the human developer; Bob surfaced the evidence and documented the options.
+- Any action with side effects on external services (NASA Earthdata downloads, watsonx.ai API calls during testing) was proposed with the expected cost/quota impact noted.
+
+**Workflow pattern used:**
+Bob followed an evidence-first pattern for all non-trivial tasks: investigate the codebase → reproduce the issue in a real terminal run → apply minimal fix → verify with a second terminal run → document the root cause. This pattern is reflected in the structure of `JUDGE.md`, where every fix entry includes the bug, the root cause, the fix applied, and the terminal output confirming the result.
 
 ---
 
