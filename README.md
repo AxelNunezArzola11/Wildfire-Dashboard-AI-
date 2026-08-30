@@ -298,31 +298,23 @@ The dashboard opens automatically in your default browser at `http://localhost:8
   very few active fires in the selected country/time window), the engine falls back to
   a weighted deterministic scoring formula. The Forecast tab shows a badge indicating
   which mode was used.
-- **Missing variables.** The model does not incorporate terrain slope, fuel load (NDVI),
-  land cover type, or human ignition sources — all of which materially affect fire
-  behaviour. Treat all outputs as decision-support aids and always consult authoritative
-  local fire management agencies before making operational decisions.
+- **Missing variables.** The forecast model does not incorporate terrain slope, fuel load,
+  or human ignition sources; NDVI and land cover are computed and displayed in the Land
+  Cover tab but are **not** connected to the forecast model's input features
+  (`MODEL_FEATURE_COLS` contains only weather variables). Treat all outputs as
+  decision-support aids and always consult authoritative local fire management agencies
+  before making operational decisions.
 
 ---
 
-## Phase 2 Roadmap
+## Roadmap Completed
 
-- **Real matched labels:** lag FIRMS data by 24 h to generate ground-truth fire/no-fire
-  labels and retrain the classifier with genuine supervision.
 - **NDVI / vegetation index:** ✅ *Implemented* — NDVI is computed on-demand from
   Sentinel-2/HLS B8A and B4 bands and displayed in the Land Cover tab alongside the
   MobileNetV2 land-cover classifier. See the [Land Cover & Vegetation](#capability-honesty)
   capability section for details.
-- **48-hour forecasting horizon:** the 7-day horizon is already implemented
-  (`forecast_engine.py` supports `horizon_days=1` or `horizon_days=7`; both are
-  selectable in the UI). A standalone 48-hour horizon (distinct from the existing
-  24-hour and 7-day options) remains a future item.
-- **Historical trend analysis:** add a dedicated tab showing fire activity trends over
-  30–90 days using FIRMS Archive data.
-- **Global country coverage:** replace the hardcoded `COUNTRY_BBOX` dict with a GeoJSON
-  world-bbox lookup (`geo_lookup.py`) — zero changes required in `app.py` or `ingestor.py`.
-- **Push alerts / notifications:** email or webhook alerts when risk level crosses a
-  configurable threshold.
+- **7-day forecasting horizon:** ✅ *Implemented* — `forecast_engine.py` supports
+  `horizon_days=1` (24 h) and `horizon_days=7` (7-day); both are selectable in the UI.
 - **Multi-user cloud deployment:** ✅ *Implemented* — deployed live on Streamlit Community Cloud: https://kwgzjbgdsdyd9epjepovex.streamlit.app/
 
 ---
