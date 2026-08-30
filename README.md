@@ -323,8 +323,7 @@ The dashboard opens automatically in your default browser at `http://localhost:8
   world-bbox lookup (`geo_lookup.py`) — zero changes required in `app.py` or `ingestor.py`.
 - **Push alerts / notifications:** email or webhook alerts when risk level crosses a
   configurable threshold.
-- **Multi-user cloud deployment:** containerise with Docker and deploy to IBM Code Engine
-  or any cloud platform; add session isolation.
+- **Multi-user cloud deployment:** ✅ *Implemented* — deployed live on Streamlit Community Cloud: https://kwgzjbgdsdyd9epjepovex.streamlit.app/
 
 ---
 
@@ -392,8 +391,8 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 |---|---|---|
 | NASA FIRMS Area API client — fetches VIIRS SNPP NRT CSV over HTTPS for a bounding-box window of 1–7 days | [`ingestor.py`](ingestor.py:29) — `FIRMS_BASE_URL`, `PRIMARY_SOURCE = "VIIRS_SNPP_NRT"` | Run dashboard → select any country → Map tab shows live fire points |
 | Requests longer than 5 days are chunked into ≤5-day slices and deduplicated | [`ingestor.py`](ingestor.py:34) — `FIRMS_MAX_DAYS = 5` | Set `FORECAST_HISTORY_DAYS=7`; ingestor issues two requests automatically |
-| SQLite TTL cache — avoids redundant API calls within the configured window | [`ingestor.py`](ingestor.py:58) — `fire_cache` table; TTL from `config.CACHE_TTL_MINUTES` (default 30 min) | Re-render within 30 min: no new FIRMS network call (log: "cache hit") |
-| 20 high-risk countries scoped by hardcoded W,S,E,N bounding boxes | [`config.py`](config.py:113) — `COUNTRY_BBOX` dict (20 entries, Angola through Chile) | Country selector in sidebar lists all 20 countries |
+| SQLite TTL cache — avoids redundant API calls within the configured window | [`ingestor.py`](ingestor.py:64) — `fire_cache` table created in `_init_schema()`; TTL from `config.CACHE_TTL_MINUTES` (default 30 min) | Re-render within 30 min: no new FIRMS network call (log: "cache hit") |
+| 20 high-risk countries scoped by hardcoded W,S,E,N bounding boxes | [`country_bboxes.py`](country_bboxes.py:12) — `COUNTRY_BBOX` dict (20 entries, Angola through Chile); re-exported via [`config.py`](config.py:110) | Country selector in sidebar lists all 20 countries |
 | Output columns normalised to a canonical schema regardless of instrument | [`ingestor.py`](ingestor.py:37) — `OUTPUT_COLUMNS`; `_FIRMS_RENAME` maps VIIRS/MODIS band names | DataFrame always has `latitude, longitude, brightness, frp, acq_date, acq_time, confidence, instrument` |
 
 </details>
@@ -408,7 +407,7 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 | 0.25° lat/lon grid built from country bounding box; capped at 200 cells | [`forecast_engine.py`](forecast_engine.py:49) — `MAX_GRID_CELLS = 200`; [`_build_grid()`](forecast_engine.py:126) | Forecast tab → grid overlay on map |
 | XGBClassifier trained on pseudo-labels from the same 7-day FIRMS window, weather features from Open-Meteo | [`forecast_engine.py`](forecast_engine.py:591) — `clf = XGBClassifier(n_estimators=50, max_depth=2, ...)` | Forecast tab badge shows "XGBoost" when ≥10 labelled samples exist |
 | Features: 5 weather columns (`temp_24h_mean`, `humidity_24h_mean`, `wind_24h_max`, `precip_24h_sum`, `soil_moisture_now`); fire history columns excluded from training to prevent trivial splits | [`forecast_engine.py`](forecast_engine.py:74) — `MODEL_FEATURE_COLS` (5 entries); exclusion rationale in docstring | Inspect feature matrix in artifact `dataset_forecast_window.csv.gz` |
-| SHAP TreeExplainer runs on top-10 risk cells after XGBoost fit; each cell gets up to 5 ranked feature contributions | [`forecast_engine.py`](forecast_engine.py:436) — `_compute_shap_contribs()` | Forecast tab → expand any top-10 row → SHAP bar chart |
+| SHAP TreeExplainer runs on top-10 risk cells after XGBoost fit; each cell gets up to 5 ranked feature contributions | [`forecast_engine.py`](forecast_engine.py:435) — `_compute_shap_contribs()` | Forecast tab → expand any top-10 row → SHAP bar chart |
 | Deterministic fallback when fewer than `MIN_LABELLED_SAMPLES = 10` pseudo-labels exist — weighted formula across fire count, humidity, temperature, wind, precipitation | [`forecast_engine.py`](forecast_engine.py:50) — `MIN_LABELLED_SAMPLES = 10`; [`_deterministic_score()`](forecast_engine.py:395) | Select a quiet country; Forecast tab badge shows "Deterministic" |
 | 7-day FIRMS window for feature engineering fetched independently of the sidebar time-range selector | [`forecast_engine.py`](forecast_engine.py:170) — `_get_fire_window()` with module-level `_window_cache` | Set sidebar to "48 h"; forecast still uses full 7-day fire history |
 
@@ -421,7 +420,7 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 
 | Capability | File / lines | Live verification |
 |---|---|---|
-| IBM Granite generator (`ibm/granite-4-h-small` default, overridable via `WATSONX_MODEL_ID`) produces plain-language risk summaries and forecast interpretations | [`llm_gateway.py`](llm_gateway.py:42) — `GRANITE_MODEL_ID`; [`_generate_summary()`](llm_gateway.py:596) | Risk Summary tab → AI analysis card |
+| IBM Granite generator (`ibm/granite-4-h-small` default, overridable via `WATSONX_MODEL_ID`) produces plain-language risk summaries and forecast interpretations | [`config.py`](config.py:42) — `GRANITE_MODEL_ID`; [`_generate_summary()`](llm_gateway.py:596) | Risk Summary tab → AI analysis card |
 | Critic model defaults to `meta-llama/llama-3-3-70b-instruct` (configurable via `WATSONX_GUARDIAN_MODEL_ID`); classifies summaries on four failure modes: fabricated numbers, contradictions, overstated certainty, missing disclaimer | [`llm_gateway.py`](llm_gateway.py:122) — `GUARDIAN_MODEL_ID`; audit prompt at lines 124–160 | Set `?debug=guardrails` URL flag → enable test toggle → watch guardrail log output |
 | Cheap numeric pre-filter: regex-extracts all numeric tokens from generated text and cross-checks against source JSON (±5% tolerance); skips LLM critic call entirely when all numbers are accounted for | [`llm_gateway.py`](llm_gateway.py:168) — `_NUM_RE`; [`numeric_prefilter()`](llm_gateway.py:203) | Pre-filter log entry "audit_insight: pre-filter PASS" visible in Streamlit logs |
 | Correction loop: one regeneration attempt on FAIL; if second attempt also fails the original text is returned with `⚠ UNVERIFIED` marker | [`llm_gateway.py`](llm_gateway.py:704) — `summarize()`; UNVERIFIED_MARKER at line 58; correction at lines 746–811 | Trigger with `?debug=guardrails` flag + checkbox to inject fabricated spread value |
@@ -439,7 +438,7 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 |---|---|---|
 | Sentinel-2 HLS bands B2/B3/B4/B8A fetched on demand from NASA Earthdata (HLSL30 product, 30 m resolution) for any configured country | [`sentinel_fetch.py`](sentinel_fetch.py:1) — `HLSL30` product; band mapping at lines 7–12 | Land Cover tab → "Fetch Sentinel-2 tile" button |
 | NDVI computed directly from satellite bands (B8A−B4)/(B8A+B4); displayed independently of classifier result as a reliable vegetation signal for any region | [`app.py`](app.py:1241) — Land Cover tab NDVI section | Land Cover tab → NDVI map renders before classifier result |
-| **Phase A — EuroSAT-10**: MobileNetV2 fine-tuned on 27,000 EuroSAT images (10 classes); **validated at 94% accuracy** on 300 real EuroSAT test images (30 × 10 classes) | [`landcover_classifier.py`](landcover_classifier.py:49) — `CLASSES_EUROSAT10`; model path `models/landcover_classifier.pt` | [JUDGE.md](JUDGE.md:14) — "Validated at 94% accuracy on real EuroSAT test images" |
+| **Phase A — EuroSAT-10**: MobileNetV2 fine-tuned on 27,000 EuroSAT images (10 classes); **validated at 93.4% accuracy** on 4,051 held-out EuroSAT test images (`test_accuracy: 0.9341` in [`models/landcover_classifier_meta.json`](models/landcover_classifier_meta.json)) | [`landcover_classifier.py`](landcover_classifier.py:49) — `CLASSES_EUROSAT10`; model path `models/landcover_classifier.pt` | [`models/landcover_classifier_meta.json`](models/landcover_classifier_meta.json) — `"test_accuracy": 0.9341` |
 | Phase A p2/p98 stretch fix: HLS float32 reflectances [0, 0.25] are per-channel stretched to the full DN range before PIL conversion, preventing the original 100%-SeaLake bug | [`landcover_classifier.py`](landcover_classifier.py:16) — NORMALISATION NOTE; `eurosat10` branch | [JUDGE.md](JUDGE.md:38) — bug, fix, and verification: Angola granule → HerbaceousVegetation 63.9%, SeaLake 0.0% |
 | **Phase B — Global-6**: MobileNetV2 retrained on EuroSAT (21,600 train) + Angola Sentinel-2 patches (474 train / 118 val); 6 canonical classes defined in `landcover_schema.py` | [`landcover_classifier.py`](landcover_classifier.py:54) — `CLASSES_GLOBAL6`; model path `models/global6_classifier.pt` | [JUDGE.md](JUDGE.md:229) — model file mtime, training data counts |
 | Phase B source-aware WeightedRandomSampler gives Angola Forest_Vegetation/Built_up 25% of within-class gradient mass to fix tropical misclassification | [`JUDGE.md`](JUDGE.md:255) — v1 vs v2 training decision record | [JUDGE.md](JUDGE.md:300) — v2 accuracy: FV 70% (+0.60), Built_up 63% (+0.25), EuroSAT overall 95.57% |
