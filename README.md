@@ -1,6 +1,8 @@
 
 # Wildfire Dashboard AI
 
+**🔴 Live demo:** https://kwgzjbgdsdyd9epjepovex.streamlit.app/
+
 ##  The Problem
 
 A heat point detected by satellite (NASA FIRMS) is just a coordinate with an
@@ -247,6 +249,10 @@ streamlit run app.py
 
 The dashboard opens automatically in your default browser at `http://localhost:8501`.
 
+> **Don't want to run it locally?** The live deployed version is available at:
+> **https://kwgzjbgdsdyd9epjepovex.streamlit.app/**
+> No installation required — NASA FIRMS and IBM watsonx.ai credentials are pre-configured in the deployment.
+
 ---
 
 ## Environment Variables
@@ -333,6 +339,22 @@ All IBM technology references below are confirmed against the actual source file
 | **IBM Granite (`ibm/granite-4-h-small`)** | IBM-authored instruction-following model in the Granite family, hosted on watsonx.ai | **Generator role** in the guardrail pipeline — produces plain-language wildfire risk summaries and forecast interpretations from structured source data. Default model; overridable via `WATSONX_MODEL_ID` env var. | [`config.py`](config.py:42) — `GRANITE_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "ibm/granite-4-h-small")`; [`llm_gateway.py`](llm_gateway.py:457) — `model_id=config.GRANITE_MODEL_ID` |
 
 > **Non-IBM model hosted on watsonx.ai (for clarity):** `meta-llama/llama-3-3-70b-instruct` is a Meta-authored model, not an IBM product. It is accessed via the same watsonx.ai infrastructure and SDK but is listed here only for accuracy. It serves as the **critic** in the generator–critic guardrail loop, auditing Granite's outputs for fabricated numbers and contradictions. Model ID confirmed at [`config.py`](config.py:49-51) — `GUARDIAN_MODEL_ID = os.getenv("WATSONX_GUARDIAN_MODEL_ID", "meta-llama/llama-3-3-70b-instruct")`.
+
+---
+
+## Future Applications
+
+> **Speculative — none of the following is built or planned.** This section describes domains the *current architecture could conceivably be adapted to*, not features in development. Every suggestion is grounded in components that already exist; each entry notes explicitly what would actually need to change.
+
+The current system was built for wildfire risk, but several of its components are general-purpose pipelines that could be retargeted. The table below traces each potential application back to the specific existing capability it would extend, and is explicit about what does not yet exist.
+
+| Potential application | What existing capability it generalises from | What would actually need to change |
+|---|---|---|
+| **Drought early-warning or flood-risk forecasting** | [`weather_client.py`](weather_client.py) already ingests Open-Meteo features (temperature, humidity, wind, precipitation, soil moisture) per grid cell. The same feature pipeline could be retargeted at a different prediction target — e.g., cumulative precipitation deficit for drought, or soil-moisture saturation for flood-risk scoring. | The XGBoost pseudo-label strategy in [`forecast_engine.py`](forecast_engine.py) would need to be replaced with a real labelling scheme sourced from historical drought/flood records. No such dataset exists in this project. The risk thresholds and SHAP feature labels are wildfire-specific and would need to be reconfigured end-to-end. |
+| **Agricultural crop-stress monitoring** | [`sentinel_fetch.py`](sentinel_fetch.py) fetches Sentinel-2/HLS bands B4 and B8A on demand for any bounding box; NDVI is computed directly as (B8A − B4) / (B8A + B4) in [`app.py`](app.py:1241). This is a general vegetation-health signal — not intrinsically fire-specific — and could surface crop stress, senescence, or irrigation failure in agricultural regions by the same formula. | The current UI presents NDVI in a wildfire-framing context. Adapting it for crop monitoring would require integrating phenological baselines (NDVI is only meaningful relative to expected seasonal norms for a given crop) and a temporal comparison view, neither of which is built. |
+| **Deforestation or urban-sprawl detection** | The MobileNetV2 land-cover classifier in [`landcover_classifier.py`](landcover_classifier.py) is trained on 6 canonical classes (Forest_Vegetation, Cropland, Water, Built_up, Bare, Wetland) using [`generate_patches.py`](generate_patches.py) for patch generation. The same training pipeline could be retrained on a different label schema for deforestation (forest vs. recently cleared) or urban expansion (built-up area growth over time). | This would require a new labelled dataset: temporally paired before/after Sentinel-2 patches with deforestation or urbanisation labels. No such dataset exists in this project. MobileNetV2 architecture is domain-agnostic but the current checkpoints (`models/landcover_classifier.pt`, `models/global6_classifier.pt`) encode wildfire-relevant classes only. Retraining from scratch on the new label schema would be required. |
+| **Domain-agnostic AI-verified environmental reporting** | The generator–critic guardrail pattern in [`llm_gateway.py`](llm_gateway.py) — IBM Granite generates a plain-language summary from structured source JSON, the Llama 3.3 70B critic audits every numeric claim against the source, and a correction loop handles failures — is not wildfire-specific. The pattern could apply to any domain where an LLM summarises structured data and numeric accuracy matters: air-quality reports, earthquake early-warning summaries, water-quality bulletins. | The system prompts in [`llm_gateway.py`](llm_gateway.py) are fully wildfire-framed (fire count, FRP, NDVI, spread risk). Every prompt would need to be rewritten for the target domain. The numeric pre-filter regex and the ±5% tolerance check would remain unchanged — those are domain-agnostic already. |
+| **Autonomous multi-domain environmental monitoring** | The autonomous agent pattern in [`agent_runner.py`](agent_runner.py) — scheduled pipeline runs, reproducible artifact bundles (dataset + model + script + report), SQLite audit trail — is entirely domain-agnostic. The four pipeline steps (ingest → risk metrics → forecast → AI summary) are wired by function calls, not domain-specific logic, so the scaffolding could host a different domain's pipeline without structural changes. | Steps 1–4 of `run_once()` call wildfire-specific functions. Each step would need a domain-appropriate replacement (e.g. a different ingestor, a different risk metric definition). The artifact-bundling and SQLite-logging infrastructure in [`artifacts.py`](artifacts.py) and [`agent_store.py`](agent_store.py) would carry over unchanged. |
 
 ---
 
