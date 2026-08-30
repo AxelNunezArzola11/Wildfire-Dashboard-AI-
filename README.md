@@ -3,6 +3,17 @@
 
 **🔴 Live demo:** https://kwgzjbgdsdyd9epjepovex.streamlit.app/
 
+## Challenge Theme
+
+**August Challenge Theme: Advance Space Exploration with AI**
+> "Build AI-powered systems that advance space exploration by improving mission success, enabling smarter decisions, and making space more accessible and understandable."
+
+This project addresses two of the three pillars directly:
+
+- **Enabling smarter decisions** — the strongest fit. An XGBoost forecast with SHAP explainability, backed by a Granite/Llama guardrail-verified AI summary, converts raw satellite fire detections into structured, human-readable risk assessments with ranked feature contributions and an auditable confidence level — not just a map, but a reasoned decision-support output.
+- **Making space more accessible and understandable** — NASA FIRMS fire detections and Sentinel-2/HLS imagery require domain expertise (orbital parameters, band indices, NRT latency constraints) to interpret in raw form. This project translates that data into plain-language risk summaries, an interactive map, and land-cover classifications a non-specialist field worker can act on.
+- **Improving mission success** — this pillar does not apply in the literal sense: this project involves no spacecraft, orbital operations, or space mission planning. Honestly framed, it applies only at one remove: Earth-based field operations (ranger deployments, civil protection responses) that consume space-derived Earth observation data. That is the user group this project was built for.
+
 ##  The Problem
 
 A heat point detected by satellite (NASA FIRMS) is just a coordinate with an
