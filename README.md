@@ -344,6 +344,20 @@ All IBM technology references below are confirmed against the actual source file
 
 ---
 
+## Present Applications
+
+> **Already works today — no code changes required.** Every item below runs as-is against the current pipeline. Claims are scoped exactly to what the code does, not to what it could be adapted to do.
+
+| What it does today | How to use it | Caveats |
+|---|---|---|
+| **Thermal anomaly mapping for any heat source in the 20 configured countries** — NASA FIRMS VIIRS_SNPP_NRT detects any surface thermal anomaly above the FRP threshold (wildfire, agricultural burn, industrial flaring, volcanic heat). [`ingestor.py`](ingestor.py) applies zero source-type filtering: the only filter is the user-adjustable `min_frp` MW threshold; all qualifying detections are returned regardless of cause. | Set the FRP slider low (e.g. 5 MW) and select a country with known industrial activity or active agriculture. | Labels ("fire risk") and AI summaries are wildfire-framed. The detections are real; the risk interpretation applies most reliably to wildfire scenarios. |
+| **Live NDVI vegetation health snapshot for any of the 20 countries** — NDVI is computed on-demand from Sentinel-2/HLS B8A and B4 bands and displayed in the Land Cover tab, independent of the classifier result. Works for any country in `COUNTRY_BBOX` without modification. | Land Cover tab → "Fetch Sentinel-2 tile" → NDVI map renders before classifier result. | Each fetch downloads ~110 MB and takes 30–60 s. NDVI is a reliable, model-independent signal for any region. |
+| **Land-cover classification for any of the 20 countries** — the Global-6 MobileNetV2 classifier runs on any fetched Sentinel-2 tile and returns a 6-class prediction (Forest_Vegetation, Cropland, Water, Built_up, Bare_Sparse, Wetland) with a calibrated confidence score. | Land Cover tab → fetch tile → classifier runs automatically. | Accuracy varies sharply by region: Greece/Portugal validated (all classes ≥ 94.6%); Angola improved-experimental (Forest_Vegetation 70%, Built_up 63%); all other countries experimental with documented domain-gap failures — see [Capability Honesty](#capability-honesty) and JUDGE.md for per-country details. |
+| **Fact-checked AI risk summaries and forecast interpretations** — the Granite/Llama guardrail loop already runs today on the specific structured outputs this pipeline produces: `RiskContext` (fire count, FRP, spread index, hotspot coordinates) and `ForecastResult` (top-10 risk cells, model used, horizon). Every generated number is cross-checked against source data before it reaches the UI. | Risk Summary and Forecast tabs → AI analysis cards. Debug the full correction loop at `?debug=guardrails`. | The AI prompts and numeric audit are tightly scoped to these specific data structures — not a general-purpose summariser for arbitrary inputs. |
+| **Unattended scheduled monitoring with reproducible artifacts for any of the 20 countries** — `agent_runner.py --loop` runs the full pipeline (ingest → risk metrics → XGBoost forecast → AI summary with guardrails) on a schedule, writing a reproducible bundle (dataset, trained model, script, Markdown report) and SQLite audit trail per cycle. | `python agent_runner.py --country Angola --loop` or `--all` for all 20 countries. | Requires watsonx.ai credentials for the AI summary step; all other pipeline steps run without API keys. |
+
+---
+
 ## Future Applications
 
 > **Speculative — none of the following is built or planned.** This section describes domains the *current architecture could conceivably be adapted to*, not features in development. Every suggestion is grounded in components that already exist; each entry notes explicitly what would actually need to change.
