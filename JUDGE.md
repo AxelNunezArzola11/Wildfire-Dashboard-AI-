@@ -803,7 +803,7 @@ countries — should be treated as at least as unreliable as Mexico, not merely
 | 🟡 Lightly checked — Plausible | Brazil |
 | 🟡 Lightly checked — Mixed | India, Australia |
 | 🟡 Lightly checked — Unreliable | Mexico |
-| ⚠️ Experimental (untested) | United States, Canada, Indonesia, Russia, DRC, Mozambique, Bolivia, Venezuela, Argentina, China, Nigeria, South Africa, Chile |
+| ⚠️ Experimental | United States, Canada, Indonesia, Russia, DRC, Mozambique, Bolivia, Venezuela, Argentina, China, Nigeria, South Africa, Chile |
 
 **This lightweight check is explicitly lower-confidence than Phase B's real
 fine-tuning + held-out accuracy measurement.** The 🟡 badge in the UI
