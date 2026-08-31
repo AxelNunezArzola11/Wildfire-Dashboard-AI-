@@ -26,6 +26,7 @@ import config
 import agent_store
 import agent_runner
 import artifacts as _artifacts
+from email_alerts import check_and_send_alert, init_alert_schema
 from ingestor import get_fire_data
 from risk_engine import compute_risk
 from forecast_engine import run_forecast
@@ -302,8 +303,9 @@ if (
 # Tabs
 # ---------------------------------------------------------------------------
 
-# Ensure agent_runs table exists (idempotent — safe to call every rerun).
+# Ensure agent_runs table and alert_state table exist (idempotent).
 agent_store.init_schema()
+init_alert_schema()
 
 # ── Land cover model — loaded once per process, not per rerun ───────────────
 @st.cache_resource(show_spinner=False)
@@ -523,6 +525,47 @@ with tab_summary:
         col2.metric("Total FRP", f"{risk_ctx.total_frp:.0f} MW")
         col3.metric("Max FRP", f"{risk_ctx.max_frp:.0f} MW")
         col4.metric("Risk Level", risk_ctx.risk_level)
+
+        # ── Email alert check (automatic, idempotent) ─────────────────────
+        # Runs every time this tab renders; the SQLite-backed idempotency
+        # guard means only a genuine HIGH→EXTREME transition actually sends.
+        # The alert_outcome is stored in session_state so a Streamlit rerun
+        # from the same tab doesn't re-show the "sent" notice after it clears.
+        _alert_key = f"alert_outcome_{country}"
+        if _alert_key not in st.session_state:
+            _alert_outcome = check_and_send_alert(country, risk_ctx)
+            st.session_state[_alert_key] = _alert_outcome
+        else:
+            _alert_outcome = st.session_state[_alert_key]
+
+        if _alert_outcome == "sent":
+            st.success(
+                f"📧 EXTREME-risk alert sent to **{config.ALERT_EMAIL_TO}** "
+                f"for **{country}**."
+            )
+        elif _alert_outcome == "failed":
+            st.error(
+                f"📧 EXTREME-risk alert for **{country}** failed to send. "
+                f"Check SMTP credentials and server logs."
+            )
+        elif risk_ctx.risk_level == "EXTREME" and _alert_outcome == "skipped-not-configured":
+            st.warning(
+                "⚠️ Risk is EXTREME but email alerts are not configured. "
+                "Set `ALERT_EMAIL_ENABLED=true` and SMTP credentials in your `.env` "
+                "to receive automated notifications."
+            )
+
+        # ── Debug-only: force-send test (gated behind ?debug=guardrails) ──
+        if st.query_params.get("debug") == "guardrails":
+            st.caption("🛠 Alert debug")
+            _force_alert_key = f"force_alert_{country}"
+            if st.button("📧 Force-send test alert (debug only)", key=_force_alert_key):
+                from email_alerts import send_extreme_risk_alert as _raw_send
+                _ok = _raw_send(country, risk_ctx)
+                if _ok:
+                    st.success("Debug alert sent.")
+                else:
+                    st.error("Debug alert failed — check logs and SMTP config.")
 
         st.divider()
 

@@ -48,6 +48,7 @@ from datetime import datetime, timezone
 import config
 import agent_store
 import artifacts as _artifacts
+from email_alerts import check_and_send_alert
 from ingestor import get_fire_data
 from risk_engine import compute_risk
 from forecast_engine import run_forecast
@@ -153,6 +154,13 @@ def run_once(
         logger.info("[agent %s] Step 2/4: computing risk metrics...", run_id[:8])
         risk_ctx = compute_risk(fire_df, country, _AGENT_FETCH_DAYS)
         risk_metrics = dataclasses.asdict(risk_ctx)
+
+        # ── Step 2b: check EXTREME-risk alert (idempotent) ─────────────────
+        alert_outcome = check_and_send_alert(country, risk_ctx)
+        logger.info(
+            "[agent %s] alert_outcome=%s risk_level=%s",
+            run_id[:8], alert_outcome, risk_ctx.risk_level,
+        )
 
         # ── Step 3: run forecast ──────────────────────────────────────────
         logger.info("[agent %s] Step 3/4: running XGBoost forecast...", run_id[:8])

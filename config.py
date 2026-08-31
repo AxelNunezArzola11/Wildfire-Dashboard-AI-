@@ -35,6 +35,30 @@ WATSONX_PROJECT_ID: str = _clean(os.getenv("WATSONX_PROJECT_ID"))
 WATSONX_URL: str = _clean(os.getenv("WATSONX_URL")) or "https://us-south.ml.cloud.ibm.com"
 
 # ---------------------------------------------------------------------------
+# Email alert settings (SMTP via Gmail app password or compatible server)
+# ---------------------------------------------------------------------------
+
+# Set to "true" to enable email alerts; any other value (or absent) disables them.
+ALERT_EMAIL_ENABLED: str = _clean(os.getenv("ALERT_EMAIL_ENABLED", "false"))
+
+# SMTP host — default is Gmail's submission endpoint (TLS on port 587).
+ALERT_SMTP_HOST: str = _clean(os.getenv("ALERT_SMTP_HOST", "smtp.gmail.com"))
+
+# SMTP port — 587 for STARTTLS (recommended); 465 for implicit TLS.
+ALERT_SMTP_PORT: str = _clean(os.getenv("ALERT_SMTP_PORT", "587"))
+
+# Gmail address used as the sending account.  Must match the account whose
+# app password is set in ALERT_SMTP_APP_PASSWORD.
+ALERT_SMTP_USER: str = _clean(os.getenv("ALERT_SMTP_USER"))
+
+# 16-character Gmail app password (Google Account → Security → App passwords).
+# NOT your regular Google password.  Requires 2FA to be enabled on the account.
+ALERT_SMTP_APP_PASSWORD: str = _clean(os.getenv("ALERT_SMTP_APP_PASSWORD"))
+
+# Recipient address for EXTREME-risk alerts (can differ from the sender).
+ALERT_EMAIL_TO: str = _clean(os.getenv("ALERT_EMAIL_TO"))
+
+# ---------------------------------------------------------------------------
 # LLM settings
 # ---------------------------------------------------------------------------
 
