@@ -30,6 +30,7 @@ def _clean(value: str | None) -> str:
 
 
 FIRMS_MAP_KEY: str = _clean(os.getenv("FIRMS_MAP_KEY"))
+CARTO_API_KEY: str = _clean(os.getenv("CARTO_API_KEY"))
 WATSONX_API_KEY: str = _clean(os.getenv("WATSONX_API_KEY"))
 WATSONX_PROJECT_ID: str = _clean(os.getenv("WATSONX_PROJECT_ID"))
 WATSONX_URL: str = _clean(os.getenv("WATSONX_URL")) or "https://us-south.ml.cloud.ibm.com"

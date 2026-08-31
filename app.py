@@ -326,9 +326,18 @@ with tab_map:
         w, s, e, n = [float(x) for x in bbox.split(",")]
         center_lat, center_lon = (s + n) / 2, (w + e) / 2
 
-        m = folium.Map(
-            location=[center_lat, center_lon], zoom_start=5, tiles="CartoDB Voyager"
+        _carto_tile_url = (
+            "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+            + (f"?key={config.CARTO_API_KEY}" if config.CARTO_API_KEY else "")
         )
+        m = folium.Map(
+            location=[center_lat, center_lon], zoom_start=5, tiles=None
+        )
+        folium.TileLayer(
+            tiles=_carto_tile_url,
+            attr="© OpenStreetMap contributors © CARTO",
+            name="CartoDB Voyager",
+        ).add_to(m)
 
         # Layer 1: Active fire points (clustered, coloured by FRP quartile)
         # Hard cap at MAP_RENDER_LIMIT rows to prevent the Folium→srcdoc payload
