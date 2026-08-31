@@ -856,5 +856,5 @@ not silently conflated with "not configured".
 
 ### Screenshot — Risk Summary tab after EXTREME-risk alert send
 
-![Risk Summary tab showing the confirmation banner after a successful EXTREME-risk email alert was sent — idempotency check passed, transition from HIGH to EXTREME detected.](images/email_alert_sent.png)
+![Risk Summary tab showing the confirmation banner after a successful EXTREME-risk email alert was sent — idempotency check passed, transition from HIGH to EXTREME detected.](images/email_alert_sent_1.png)
 *Risk Summary tab showing the confirmation banner after a successful EXTREME-risk email alert was sent — idempotency check passed, transition from HIGH to EXTREME detected.*

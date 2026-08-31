@@ -508,7 +508,7 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 ![Autonomous agent run history — status, guardrail verdict, and latency per cycle across all configured countries.](images/agent_status.png)
 *Autonomous agent run history — status, guardrail verdict, and latency per cycle across all configured countries.*
 
-![Confirmed EXTREME-risk email alert sent for Angola, verified live against the deployed Streamlit Cloud app.](images/email_alert_sent.png)
+![Confirmed EXTREME-risk email alert sent for Angola, verified live against the deployed Streamlit Cloud app.](images/email_alert_sent_1.png)
 *Confirmed EXTREME-risk email alert sent for Angola, verified live against the deployed Streamlit Cloud app.*
 
 </details>
