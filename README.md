@@ -294,6 +294,12 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 
 ---
 
+## License
+
+This project is licensed under the Apache License 2.0 — see [LICENSE](LICENSE) for details.
+
+---
+
 ## Data Sources
 
 | Source | Description | License |
