@@ -14,6 +14,9 @@ This project addresses two of the three pillars directly:
 - **Making space more accessible and understandable** — NASA FIRMS fire detections and Sentinel-2/HLS imagery require domain expertise (orbital parameters, band indices, NRT latency constraints) to interpret in raw form. This project translates that data into plain-language risk summaries, an interactive map, and land-cover classifications a non-specialist field worker can act on.
 - **Improving mission success** — this pillar does not apply in the literal sense: this project involves no spacecraft, orbital operations, or space mission planning. Honestly framed, it applies only at one remove: Earth-based field operations (ranger deployments, civil protection responses) that consume space-derived Earth observation data. That is the user group this project was built for.
 
+![AI-generated risk summary for Angola — Granite generator output, guardrail-verified against the underlying evidence.](images/hero_risk_summary.png)
+*AI-generated risk summary for Angola — Granite generator output, guardrail-verified against the underlying evidence.*
+
 ##  The Problem
 
 A heat point detected by satellite (NASA FIRMS) is just a coordinate with an
@@ -282,6 +285,12 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 | `FORECAST_GRID_DEG` | Optional | Forecast grid cell size in degrees. Defaults to `0.25` (≈ 28 km at the equator) |
 | `FORECAST_HISTORY_DAYS` | Optional | Days of FIRMS history used to build forecast features. Defaults to `7` |
 | `DB_PATH` | Optional | Path to the SQLite cache database file. Defaults to `wildfire_cache.db` |
+| `ALERT_EMAIL_ENABLED` | Optional | Set to `true` to enable EXTREME-risk email alerts. Defaults to `false` (disabled). |
+| `ALERT_SMTP_HOST` | Optional | SMTP server hostname. Defaults to `smtp.gmail.com`. |
+| `ALERT_SMTP_PORT` | Optional | SMTP port (587 for STARTTLS, 465 for implicit TLS). Defaults to `587`. |
+| `ALERT_SMTP_USER` | Optional* | Gmail address used as the sending account. Required when alerts are enabled. |
+| `ALERT_SMTP_APP_PASSWORD` | Optional* | 16-character Gmail app password (not your Google account password). Required when alerts are enabled. |
+| `ALERT_EMAIL_TO` | Optional* | Recipient email address for EXTREME-risk alerts. Required when alerts are enabled. |
 
 ---
 
@@ -327,6 +336,7 @@ The dashboard opens automatically in your default browser at `http://localhost:8
 - **7-day forecasting horizon:** ✅ *Implemented* — `forecast_engine.py` supports
   `horizon_days=1` (24 h) and `horizon_days=7` (7-day); both are selectable in the UI.
 - **Multi-user cloud deployment:** ✅ *Implemented* — deployed live on Streamlit Community Cloud: https://kwgzjbgdsdyd9epjepovex.streamlit.app/
+- **EXTREME-risk push alerts:** ✅ *Implemented* — [`email_alerts.py`](email_alerts.py) sends email on the first EXTREME risk transition per country via Gmail SMTP (stdlib `smtplib`, no new dependency). Idempotent: fires only on non-EXTREME → EXTREME transitions; state persisted in the `alert_state` SQLite table. Wired into both the agent loop and the Risk Summary tab. 17/17 tests passing. See [Autonomous Agent](#capability-honesty) capability section and JUDGE.md for full details.
 
 ---
 
@@ -355,6 +365,7 @@ All IBM technology references below are confirmed against the actual source file
 | **Land-cover classification for any of the 20 countries** — the Global-6 MobileNetV2 classifier runs on any fetched Sentinel-2 tile and returns a 6-class prediction (Forest_Vegetation, Cropland, Water, Built_up, Bare_Sparse, Wetland) with a calibrated confidence score. | Land Cover tab → fetch tile → classifier runs automatically. | Accuracy varies sharply by region: Greece/Portugal validated (all classes ≥ 94.6%); Angola improved-experimental (Forest_Vegetation 70%, Built_up 63%); all other countries experimental with documented domain-gap failures — see [Capability Honesty](#capability-honesty) and JUDGE.md for per-country details. |
 | **Fact-checked AI risk summaries and forecast interpretations** — the Granite/Llama guardrail loop already runs today on the specific structured outputs this pipeline produces: `RiskContext` (fire count, FRP, spread index, hotspot coordinates) and `ForecastResult` (top-10 risk cells, model used, horizon). Every generated number is cross-checked against source data before it reaches the UI. | Risk Summary and Forecast tabs → AI analysis cards. Debug the full correction loop at `?debug=guardrails`. | The AI prompts and numeric audit are tightly scoped to these specific data structures — not a general-purpose summariser for arbitrary inputs. |
 | **Unattended scheduled monitoring with reproducible artifacts for any of the 20 countries** — `agent_runner.py --loop` runs the full pipeline (ingest → risk metrics → XGBoost forecast → AI summary with guardrails) on a schedule, writing a reproducible bundle (dataset, trained model, script, Markdown report) and SQLite audit trail per cycle. | `python agent_runner.py --country Angola --loop` or `--all` for all 20 countries. | Requires watsonx.ai credentials for the AI summary step; all other pipeline steps run without API keys. |
+| **EXTREME-risk email alerts (automatic and manual)** — [`email_alerts.py`](email_alerts.py) sends a plain-text alert email on the first EXTREME risk transition per country, using Gmail SMTP and stdlib `smtplib` (no new pip dependency). Idempotent: the `alert_state` SQLite table records the last-alerted level per country; a new email fires only when the level transitions from non-EXTREME into EXTREME. Also triggerable from the Risk Summary tab when the dashboard is open; both paths share the same SQLite state so they cannot double-send for the same transition. | Set `ALERT_EMAIL_ENABLED=true` plus the five SMTP env vars in `.env`. Run the agent or load the Risk Summary tab while risk is EXTREME. | Requires a Gmail account with 2FA enabled and a 16-char app password (Google Account → Security → App passwords). Daily Gmail send limit: 500/day — sufficient for occasional operational alerts. |
 
 ---
 
@@ -428,6 +439,9 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 | Deterministic fallback when fewer than `MIN_LABELLED_SAMPLES = 10` pseudo-labels exist — weighted formula across fire count, humidity, temperature, wind, precipitation | [`forecast_engine.py`](forecast_engine.py:50) — `MIN_LABELLED_SAMPLES = 10`; [`_deterministic_score()`](forecast_engine.py:395) | Select a quiet country; Forecast tab badge shows "Deterministic" |
 | 7-day FIRMS window for feature engineering fetched independently of the sidebar time-range selector | [`forecast_engine.py`](forecast_engine.py:170) — `_get_fire_window()` with module-level `_window_cache` | Set sidebar to "48 h"; forecast still uses full 7-day fire history |
 
+![Weather feature contributions driving the 24-hour forecast — each bar shows a weather feature's share of the total mean absolute SHAP across the top-10 highest-risk grid cells, expressed as a percentage of prediction push.](images/forecast_explainability.png)
+*Weather feature contributions driving the 24-hour forecast — each bar shows a weather feature's share of the total mean absolute SHAP across the top-10 highest-risk grid cells, expressed as a percentage of prediction push.*
+
 </details>
 
 ---
@@ -462,6 +476,12 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 | Phase B normalisation fix: `global6` branch clips to [0,1] then applies ImageNet Normalize directly (no p2/p98 stretch) to match training pipeline | [`landcover_classifier.py`](landcover_classifier.py:24) — NORMALISATION NOTE; `global6` branch | [JUDGE.md](JUDGE.md:165) — evidence table: training path → Forest_Vegetation 95.5%; fixed path → Forest_Vegetation 60.9% (was Built_up 100%) |
 | Non-European scenes display ⚠️ Experimental badge; NDVI metric shown prominently as primary trust signal | [`app.py`](app.py:1241) — Land Cover tab | [JUDGE.md](JUDGE.md:121) — badge text and rationale |
 
+![On-demand Sentinel-2 land-cover classification and NDVI map for Angola — MobileNetV2 Global-6 classifier output with per-pixel vegetation index.](images/landcover1.png)
+*On-demand Sentinel-2 land-cover classification and NDVI map for Angola — MobileNetV2 Global-6 classifier output with per-pixel vegetation index.*
+
+![Land-cover classification result with class distribution and confidence score — ⚠️ Experimental badge displayed for non-European regions.](images/landcover2.png)
+*Land-cover classification result with class distribution and confidence score — ⚠️ Experimental badge displayed for non-European regions.*
+
 </details>
 
 ---
@@ -477,6 +497,13 @@ Each table below maps a real, wired capability to the exact file and line (or bl
 | Reproducible artifact bundle saved to `agent_artifacts/{run_id}/` per run: `dataset.csv.gz` (48h FIRMS window), `dataset_forecast_window.csv.gz` (7-day XGBoost training input), `model.json` (trained booster or deterministic sentinel), `model_script.py`, `report.md` | [`artifacts.py`](artifacts.py:96) — `save_run_artifacts()`; file list at lines 120–145 | After a run: inspect `agent_artifacts/<run_id>/` directory |
 | SQLite `agent_runs` table in `wildfire_cache.db` persists every run with run_id, country, status, risk_metrics (JSON), forecast_top10 (JSON), guardrail_verdict, latency_seconds, artifacts_dir | [`agent_store.py`](agent_store.py:53) — `_CREATE_SQL` schema; `init_schema()`, `insert_run()`, `update_run()` | Agent Status tab in the dashboard — run history table with all columns |
 | Guardrail verdict (`pass` / `corrected` / `unverified` / `n/a`) recorded per run and surfaced in the Agent Status tab | [`agent_runner.py`](agent_runner.py:62) — `_classify_guardrail()`; [`agent_store.py`](agent_store.py:19) — `guardrail_verdict` column | Agent Status tab → Guardrail column in run history table |
+| EXTREME-risk email alert (idempotent): fires only on non-EXTREME → EXTREME transitions per country; state persisted in `alert_state` SQLite table; distinct `"failed"` outcome for genuine SMTP errors | [`email_alerts.py`](email_alerts.py:182) — `check_and_send_alert()`; [`agent_runner.py`](agent_runner.py:155) — Step 2b | Set `ALERT_EMAIL_ENABLED=true` + SMTP credentials; run agent → log shows `alert_outcome=sent` or `skipped-*` |
+
+![Autonomous agent run history — status, guardrail verdict, and latency per cycle across all configured countries.](images/agent_status.png)
+*Autonomous agent run history — status, guardrail verdict, and latency per cycle across all configured countries.*
+
+![Confirmed EXTREME-risk email alert sent for Angola, verified live against the deployed Streamlit Cloud app.](images/email_alert_sent.png)
+*Confirmed EXTREME-risk email alert sent for Angola, verified live against the deployed Streamlit Cloud app.*
 
 </details>
 

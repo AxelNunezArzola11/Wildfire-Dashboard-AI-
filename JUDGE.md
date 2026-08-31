@@ -809,3 +809,52 @@ countries — should be treated as at least as unreliable as Mexico, not merely
 fine-tuning + held-out accuracy measurement.** The 🟡 badge in the UI
 acknowledges the review without overstating it.
 
+
+---
+
+## Email Alerts — EXTREME Risk Notifications
+
+### Feature summary
+
+Idempotent per-country email alerts triggered when the computed risk level
+transitions into EXTREME. Implemented in [`email_alerts.py`](email_alerts.py)
+and wired into both the autonomous agent loop (`agent_runner.py` Step 2b)
+and the Streamlit Risk Summary tab (`app.py`).
+
+**Transport:** Gmail SMTP via a 16-character app password (`smtplib` stdlib,
+no new pip dependency). Configurable via six env vars; disabled by default.
+
+**Idempotency mechanism:** `alert_state` table in `wildfire_cache.db` (the
+same SQLite database used by `fire_cache` and `agent_runs`). Keyed on
+`country TEXT PRIMARY KEY`; stores `last_alerted_level` and
+`last_alerted_at`. A send fires only when the stored level is not EXTREME
+and the current level is EXTREME. Non-EXTREME levels always update the row,
+so the next EXTREME transition fires correctly.
+
+**Return values from `check_and_send_alert()`:**
+
+| Value | Meaning |
+|---|---|
+| `"sent"` | Email dispatched; state recorded as EXTREME |
+| `"skipped-not-extreme"` | Current risk level is not EXTREME; state updated to current level |
+| `"skipped-already-alerted"` | Risk is still EXTREME from a previous cycle; no resend |
+| `"skipped-not-configured"` | `ALERT_EMAIL_ENABLED` not `true` or credentials missing |
+| `"failed"` | Configured and attempted, but SMTP call returned an error; state NOT recorded (next cycle retries) |
+
+The `"failed"` / `"skipped-not-configured"` distinction is explicit: a
+genuine SMTP error (wrong password, network failure, Gmail rejection) is
+surfaced as `"failed"` in the agent log and as a red `st.error()` in the UI,
+not silently conflated with "not configured".
+
+### Test evidence
+
+17/17 checks pass in [`test_email_alerts.py`](test_email_alerts.py):
+- Fail-open path (disabled/no credentials): no crash, returns `"skipped-not-configured"`
+- Idempotency sequence (HIGH → EXTREME → EXTREME → MEDIUM → EXTREME): exactly 2 sends fired, confirmed by SQLite state after each step
+- MIME message construction: subject, From, To, body content verified against a local mock SMTP server (`smtpd.SMTPServer` on `127.0.0.1:10025`); captured wire data shown in test output
+- SMTP failure path: mocked `send_extreme_risk_alert → False` returns `"failed"`, `alert_state` row is `None` (confirmed by SQLite query in test)
+
+### Screenshot — Risk Summary tab after EXTREME-risk alert send
+
+![Risk Summary tab showing the confirmation banner after a successful EXTREME-risk email alert was sent — idempotency check passed, transition from HIGH to EXTREME detected.](images/email_alert_sent.png)
+*Risk Summary tab showing the confirmation banner after a successful EXTREME-risk email alert was sent — idempotency check passed, transition from HIGH to EXTREME detected.*
