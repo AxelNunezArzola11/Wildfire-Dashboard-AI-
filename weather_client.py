@@ -31,9 +31,11 @@ import config
 
 logger = logging.getLogger(__name__)
 
-# Maximum parallel Open-Meteo requests. Keeps wall-clock time ≤ ~5 s for 200 points
-# while staying well within Open-Meteo's rate limits.
-_WEATHER_WORKERS = 10
+# Maximum parallel Open-Meteo requests. Capped at 4 to stay within Open-Meteo's
+# free-tier concurrency limit (~5 simultaneous connections). At 10 workers ~5% of
+# requests were rejected with HTTP 429 "Too many concurrent requests"; at 4 workers
+# the failure rate drops to ~0% with a modest increase in wall-clock time.
+_WEATHER_WORKERS = 4
 
 # ---------------------------------------------------------------------------
 # Constants
